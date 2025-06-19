@@ -1,0 +1,130 @@
+Title: "My job is going to change in a dramatic way”: Exploring the future of the internet with Cloudflare
+Content: In this episode of Leaders of Code, Jody Bailey, Chief Product and Technology Officer at Stack Overflow, sits down with Dane Knecht, the newly appointed Chief Technology Officer at Cloudflare.
+Published: Thu, 19 Jun 2025 07:40:00 GMT
+--------------------------------------------------------------------------------
+Title: Learn like a lurker: Gen Z’s digital-first lifestyle and the future of knowledge
+Content: As a generation characterized as &quot;digital natives,&quot; the way Gen Z interacts with and consumes knowledge is rooted in their desire for instant gratification and personalization. How will this affect the future of knowledge management and the technologies of tomorrow?
+Published: Wed, 18 Jun 2025 16:00:00 GMT
+--------------------------------------------------------------------------------
+Title: Smarter teams, brighter insights: Stack Overflow for Teams Business summer bundle
+Content: Read on to see the latest features coming to Stack Overflow for Teams Business users!
+Published: Wed, 18 Jun 2025 02:00:00 GMT
+--------------------------------------------------------------------------------
+Title: After 30 years, Java is still brewing up new features
+Content: It’s Java’s 30th anniversary! Ryan welcomes back Georges Saab,  Senior VP of Development for the Java Platform Group and Chair of the OpenJDK Governing Board, to reflect on Java’s changes over the last five years.
+Published: Tue, 17 Jun 2025 07:40:00 GMT
+--------------------------------------------------------------------------------
+Title: “We’re not worried about compute anymore”: The future of AI models
+Content: Ryan Donovan and Ben Popper sit down with Jamie de Guerre, SVP of Product at Together AI, to discuss the evolving landscape of AI and open-source models. They explore the significance of infrastructure in AI, the differences between open-source and closed-source models, and the ethical considerations surrounding AI technology. Jamie emphasized the importance of leveraging internal data for model training and the need for transparency in AI practices.
+Published: Fri, 13 Jun 2025 07:40:00 GMT
+--------------------------------------------------------------------------------
+Title: Why you need diverse third-party data to deliver trusted AI solutions
+Content: Diverse, high-quality data is a prerequisite for reliable, effective, and ethical AI solutions.
+Published: Wed, 11 Jun 2025 14:00:00 GMT
+--------------------------------------------------------------------------------
+Title: Better vibes and vibe coding with Gemini 2.5
+Content: Ryan and Ben welcome Tulsee Doshi and Logan Kilpatrick from Google&#x27;s DeepMind to discuss the advanced capabilities of the new Gemini 2.5.
+Published: Tue, 10 Jun 2025 07:40:00 GMT
+--------------------------------------------------------------------------------
+Title: Banking on a serverless world
+Content: Kathleen Vignos, VP of Software Engineering at Capital One, sits down with Ryan to explore shifting to 100% serverless architecture in enterprise, deploying talent for better customer experience, and fostering AI innovation and tech advancements in a regulated banking environment.
+Published: Fri, 06 Jun 2025 07:40:00 GMT
+--------------------------------------------------------------------------------
+Title: If an attacker can edit your mobile code, how do you defend your app?
+Content: Ryan is joined by Jan Seredynski, Mobile Security Researcher and Pentester at Guardsquare, to talk about how you protect your app when the attackers control the code and the device it runs on.
+Published: Wed, 04 Jun 2025 12:47:19 GMT
+--------------------------------------------------------------------------------
+Title: Stack Exchange knowledge is for everyone (and now available on Snowflake Marketplace)
+Content: Snowflake customers can now easily enrich their AI applications and agentic systems with some of the most trusted, highest-quality data available while respecting our community members who provide this content with proper attribution.
+Published: Tue, 03 Jun 2025 13:00:00 GMT
+--------------------------------------------------------------------------------
+Title: In a deterministic simulation, you can debug with time travel
+Content: Will Wilson, CEO and co-founder of Antithesis, joins Ryan and Stack Overflow senior director of engineering Ben Matthews on the podcast to discuss deterministic simulation testing, the pitfalls of chaos testing in an AI-driven world, and how testing can help developers deal with technical debt.
+Published: Tue, 03 Jun 2025 07:40:00 GMT
+--------------------------------------------------------------------------------
+Title: Integrating AI agents: Navigating challenges, ensuring security, and driving adoption
+Content: Positioned at the intersection of automation, decision intelligence, and data orchestration, AI agents are quickly emerging as essential tools for aligning business outcomes with technical workflows.
+Published: Mon, 02 Jun 2025 16:15:00 GMT
+--------------------------------------------------------------------------------
+Title: Getting rid of the pain for developers on Shopify
+Content: Ryan welcomes Glen Coates, VP of Product at Shopify, to dive into the intricacies of managing a developer-focused product, the challenges of backwards compatibility, and the implications of AI and LLMs in Shopify&#x27;s development environment.
+Published: Fri, 30 May 2025 07:40:00 GMT
+--------------------------------------------------------------------------------
+Title: Not just a vibe, the Stack Overflow Developer Survey is really here
+Content: This year, we&#x27;re not just collecting data; we&#x27;re reflecting on the last year of questions, answers, hallucinations, job changes, tech stacks, memory allocations, models, systems and agents—together.
+Published: Thu, 29 May 2025 14:30:00 GMT
+--------------------------------------------------------------------------------
+Title: Understanding the limitations of AI is crucial for enterprise success
+Content: What challenges do organizations face when adopting AI, and why is understanding its limitations key to success?
+Published: Thu, 29 May 2025 07:40:00 GMT
+--------------------------------------------------------------------------------
+Title: A deep dive into building an agent framework for Salesforce
+Content: We’re always trying to make it easy for users to pick out the information they need and gain insights into their processes, so a natural language interface seemed like a dream.
+Published: Wed, 28 May 2025 14:00:00 GMT
+--------------------------------------------------------------------------------
+Title: Strengthening integrations, reliability, and trust: New features for Stack Overflow for Teams
+Content: The 2025.4 Stack Overflow for Teams Enterprise (SOE) release is all about helping teams work more seamlessly across tools, departments, and knowledge silos.
+Published: Tue, 27 May 2025 13:00:00 GMT
+--------------------------------------------------------------------------------
+Title: “The future is agents”: Building a platform for RAG agents
+Content: Douwe Kiela, CEO and cofounder of Contextual AI, joins Ryan and Ben to explore the intricacies of retrieval-augmented generation (RAG). They discuss the early research Douwe did at Meta that jump started the whole thing, the challenges of hallucinations, and the significance of context windows in AI applications.
+Published: Tue, 27 May 2025 07:40:00 GMT
+--------------------------------------------------------------------------------
+Title: WBIT #8: Typescript for gut biomes
+Content: Kyle is joined by his former colleague Tyler McEntee, now a senior software engineer at Jona, to talk about doing everything all at once at a startup.
+Published: Mon, 26 May 2025 04:40:00 GMT
+--------------------------------------------------------------------------------
+Title: Can a dev environment spark joy? The Android team thinks so.
+Content: Matthew McCullough, VP of Product for Android Developer Experience, sits down with Ryan to talk advancements in Android development, enhancing developer efficiency and reducing routine toil, and the application of Gemini AI models to improve software toolchains.
+Published: Fri, 23 May 2025 07:40:00 GMT
+--------------------------------------------------------------------------------
+Title: GitHub Copilot Spaces: Bring the right context to every suggestion
+Content: <p>Learn how to build your first space in minutes and customize Copilot to match your team's unique coding style and workflows.</p>
+<p>The post <a href="https://github.blog/ai-and-ml/github-copilot/github-copilot-spaces-bring-the-right-context-to-every-suggestion/">GitHub Copilot Spaces: Bring the right context to every suggestion</a> appeared first on <a href="https://github.blog">The GitHub Blog</a>.</p>
+Published: Wed, 18 Jun 2025 16:00:00 +0000
+--------------------------------------------------------------------------------
+Title: 5 tips for using GitHub Copilot with issues to boost your productivity
+Content: <p>Reduce context-switching, minimize manual work, and accelerate resolution times with these new AI-powered features.</p>
+<p>The post <a href="https://github.blog/ai-and-ml/github-copilot/5-tips-for-using-github-copilot-with-issues-to-boost-your-productivity/">5 tips for using GitHub Copilot with issues to boost your productivity</a> appeared first on <a href="https://github.blog">The GitHub Blog</a>.</p>
+Published: Tue, 17 Jun 2025 16:00:00 +0000
+--------------------------------------------------------------------------------
+Title: Highlights from Git 2.50
+Content: <p>The open source Git project just released Git 2.50. Here is GitHub’s look at some of the most interesting features and changes introduced since last time.</p>
+<p>The post <a href="https://github.blog/open-source/git/highlights-from-git-2-50/">Highlights from Git 2.50</a> appeared first on <a href="https://github.blog">The GitHub Blog</a>.</p>
+Published: Mon, 16 Jun 2025 17:12:27 +0000
+--------------------------------------------------------------------------------
+Title: How the GitHub billing team uses the coding agent in GitHub Copilot to continuously burn down technical debt
+Content: <p>Tech debt is a big problem that no one has time to solve. GitHub Copilot coding agent can help.</p>
+<p>The post <a href="https://github.blog/ai-and-ml/github-copilot/how-the-github-billing-team-uses-the-coding-agent-in-github-copilot-to-continuously-burn-down-technical-debt/">How the GitHub billing team uses the coding agent in GitHub Copilot to continuously burn down technical debt</a> appeared first on <a href="https://github.blog">The GitHub Blog</a>.</p>
+Published: Thu, 12 Jun 2025 16:00:00 +0000
+--------------------------------------------------------------------------------
+Title: GitHub Availability Report: May 2025
+Content: <p>In May, we experienced three incidents that resulted in degraded performance across GitHub services.</p>
+<p>The post <a href="https://github.blog/news-insights/company-news/github-availability-report-may-2025/">GitHub Availability Report: May 2025</a> appeared first on <a href="https://github.blog">The GitHub Blog</a>.</p>
+Published: Wed, 11 Jun 2025 23:24:41 +0000
+--------------------------------------------------------------------------------
+Title: How GitHub engineers tackle platform problems
+Content: <p>Our best practices for quickly identifying, resolving, and preventing issues at scale.</p>
+<p>The post <a href="https://github.blog/engineering/infrastructure/how-github-engineers-tackle-platform-problems/">How GitHub engineers tackle platform problems</a> appeared first on <a href="https://github.blog">The GitHub Blog</a>.</p>
+Published: Tue, 10 Jun 2025 16:00:00 +0000
+--------------------------------------------------------------------------------
+Title: GitHub for Beginners: Code review and refactoring with GitHub Copilot
+Content: <p>Learn how to use GitHub Copilot to help review and polish your code.</p>
+<p>The post <a href="https://github.blog/ai-and-ml/github-copilot/github-for-beginners-code-review-and-refactoring-with-github-copilot/">GitHub for Beginners: Code review and refactoring with GitHub Copilot</a> appeared first on <a href="https://github.blog">The GitHub Blog</a>.</p>
+Published: Mon, 09 Jun 2025 13:00:00 +0000
+--------------------------------------------------------------------------------
+Title: Assigning and completing issues with coding agent in GitHub Copilot
+Content: <p>Have you tried the new coding agent in GitHub Copilot? Here’s how developers are using it to work more efficiently. </p>
+<p>The post <a href="https://github.blog/ai-and-ml/github-copilot/assigning-and-completing-issues-with-coding-agent-in-github-copilot/">Assigning and completing issues with coding agent in GitHub Copilot</a> appeared first on <a href="https://github.blog">The GitHub Blog</a>.</p>
+Published: Fri, 06 Jun 2025 16:00:00 +0000
+--------------------------------------------------------------------------------
+Title: How to create issues and pull requests in record time on GitHub
+Content: <p>Learn how to spin up a GitHub Issue, hand it to Copilot, and get a draft pull request in the same workflow you already know.</p>
+<p>The post <a href="https://github.blog/developer-skills/github/how-to-create-issues-and-pull-requests-in-record-time-on-github/">How to create issues and pull requests in record time on GitHub</a> appeared first on <a href="https://github.blog">The GitHub Blog</a>.</p>
+Published: Thu, 05 Jun 2025 16:00:00 +0000
+--------------------------------------------------------------------------------
+Title: Hack the model: Build AI security skills with the GitHub Secure Code Game
+Content: <p>Dive into the novel security challenges AI introduces with the open source game  that over 10,000 developers have used to sharpen their skills.</p>
+<p>The post <a href="https://github.blog/security/hack-the-model-build-ai-security-skills-with-the-github-secure-code-game/">Hack the model: Build AI security skills with the GitHub Secure Code Game</a> appeared first on <a href="https://github.blog">The GitHub Blog</a>.</p>
+Published: Tue, 03 Jun 2025 16:37:03 +0000
+--------------------------------------------------------------------------------

@@ -212,17 +212,16 @@ st.set_page_config(page_title="RAG-Enhanced AI Startup Consultancy", layout="wid
 
 # Dynamic title based on RAG availability
 if RAG_AVAILABLE:
-    st.title("🚀 RAG-Enhanced AI Startup Consultancy Firm")
+    st.title("🌎 StartupAI Startup Consultancy Firm")
     st.markdown("*Powered by Knowledge Bases + Real-time Search*")
 else:
-    st.title("🚀 AI Startup Consultancy Firm")
-    st.markdown("*Powered by Real-time Search*")
+    st.title("🌎 StartupAI Consultancy Firm")
 
 # Enhanced Sidebar with Data Ingestion Status
 with st.sidebar:
     st.header("About This App")
     if RAG_AVAILABLE:
-        st.write("Our AI board (CEO, CTO, CFO, COO) will analyze your business idea using **RAG-enhanced knowledge bases**, **real-time data feeds**, and **live market research**.")
+        st.write("Our AI board (CEO, CTO, CFO, COO) will analyze your business idea and provide a report on how you can turn in into reality!.")
     else:
         st.write("Our AI board (CEO, CTO, CFO, COO) will analyze your business idea using real-time market data.")
     
@@ -230,14 +229,8 @@ with st.sidebar:
     st.subheader("How It Works")
     st.write("1. **Submit Idea:** Enter your business concept")
     st.write("2. **Board Discussion:** Watch AI agents collaborate")
-    if RAG_AVAILABLE:
-        st.write("3. **RAG Enhancement:** Agents access knowledge bases")
-        st.write("4. **Live Data:** Real-time market feeds integrated")
-        st.write("5. **Final Report:** Get comprehensive analysis")
-        st.write("6. **Export:** Download as PDF or Markdown")
-    else:
-        st.write("3. **Final Report:** Get comprehensive analysis")
-        st.write("4. **Export:** Download as PDF or Markdown")
+    st.write("3. **Final Report:** Get comprehensive analysis")
+    st.write("4. **Export:** Download as PDF or Markdown")
     
     st.markdown("---")
     
@@ -375,13 +368,12 @@ with st.sidebar:
         st.write("• Harvard Business Review")
     
     st.markdown("---")
-    st.caption("Powered by LangGraph • OpenAI • RSS Feeds • Streamlit")
     
     # Enhanced status indicator
     if RAG_AVAILABLE and total_files > 0:
-        st.success("🚀 **FULLY ENHANCED** - RAG + Live Data Active")
+        st.success("🚀 **FULLY LOADED** - RAG + Live Data Active")
     elif RAG_AVAILABLE:
-        st.warning("🔶 **PARTIALLY ENHANCED** - RAG Active, Add External Data")
+        st.warning("🔶 **PARTIALLY LOADED** - RAG Active, Add External Data")
     else:
         st.info("🔷 **BASIC MODE** - Real-time Search Only")
 
@@ -389,21 +381,16 @@ with st.sidebar:
 if "messages" not in st.session_state:
     st.session_state.messages = []
     
-    welcome_message = """👋 Welcome to your AI Startup Consultancy!
-
-I'm here to facilitate a board meeting with our expert AI agents.
+    welcome_message = """👋 Welcome to your StartupAI Consultancy!
 
 **Ready to analyze your business idea?**
 
-Our team includes:
+Our team below will help you turn your ideas into actionable businesses:
 - 💼 **Sarah (CEO)**: Strategic vision and market analysis
 - 💻 **Mike (CTO)**: Technical feasibility and architecture  
 - 💰 **Jennifer (CFO)**: Financial modeling and funding strategy
 - ⚙️ **Tom (COO)**: Operations and execution planning
 """
-    
-    if RAG_AVAILABLE:
-        welcome_message += "\n🔍 **Enhanced with RAG**: Agents now have access to specialized knowledge bases for more accurate insights!"
     
     welcome_message += "\nPlease share your business idea below to begin the consultation!"
     
@@ -464,7 +451,7 @@ if prompt := st.chat_input("Describe your business idea..."):
     }
     
     # Process with spinner
-    spinner_text = "🤝 The RAG-enhanced AI board is in session..." if RAG_AVAILABLE else "🤝 The AI board is in session..."
+    spinner_text = "🤝 The AI board is in session..."
     with st.spinner(spinner_text):
         try:
             config = {"recursion_limit": 30}
