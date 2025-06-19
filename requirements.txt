@@ -6,6 +6,7 @@ langchain-tavily
 langgraph
 python-dotenv
 fpdf2
+faiss-cpu
 sentence-transformers>=2.2.2
 numpy>=1.21.0
 feedparser
