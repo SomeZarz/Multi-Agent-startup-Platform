@@ -1,9 +1,13 @@
 import os
 import re
+import sys
 import functools
 import hashlib
+import numpy as np
 from dotenv import load_dotenv
 from typing import Annotated, List, TypedDict
+from pathlib import Path
+
 from langchain_core.messages import BaseMessage, HumanMessage
 from langgraph.graph import StateGraph, END
 from langchain_openai import ChatOpenAI
@@ -15,6 +19,20 @@ from agents.cfo import create_cfo_agent
 from agents.cto import create_cto_agent
 from agents.coo import create_coo_agent
 from agents.supervisor import create_supervisor_chain
+
+# Enhanced semantic similarity checking
+try:
+    from sentence_transformers import SentenceTransformer
+    SEMANTIC_MODEL = SentenceTransformer('all-MiniLM-L6-v2')
+    SEMANTIC_AVAILABLE = True
+except ImportError:
+    print("⚠️ sentence-transformers not available. Using basic repetition detection.")
+    SEMANTIC_AVAILABLE = False
+
+# Add the knowledge_system directory to Python path
+script_dir = Path(__file__).parent
+knowledge_system_path = script_dir / "knowledge_system"
+sys.path.insert(0, str(knowledge_system_path))
 
 # Import RAG knowledge manager with error handling
 try:
@@ -45,11 +63,46 @@ class AgentState(TypedDict):
     agent_call_counts: dict
     conversation_quality: float
     context_summary: str
+    agent_embeddings: dict  # New for semantic similarity
+
+# --- Enhanced Semantic Similarity Detection ---
+class EnhancedRepetitionDetector:
+    def __init__(self):
+        self.agent_embeddings = {}
+        
+    def is_semantically_similar(self, content, agent_name, threshold=0.85):
+        """Check semantic similarity instead of just text hashing"""
+        if not SEMANTIC_AVAILABLE:
+            return self._basic_similarity_check(content, agent_name)
+            
+        if agent_name not in self.agent_embeddings:
+            self.agent_embeddings[agent_name] = []
+        
+        current_embedding = SEMANTIC_MODEL.encode([content])
+        
+        for prev_embedding in self.agent_embeddings[agent_name][-3:]:  # Check last 3
+            similarity = np.dot(current_embedding[0], prev_embedding) / (
+                np.linalg.norm(current_embedding[0]) * np.linalg.norm(prev_embedding)
+            )
+            if similarity > threshold:
+                return True
+        
+        self.agent_embeddings[agent_name].append(current_embedding[0])
+        if len(self.agent_embeddings[agent_name]) > 5:  # Keep only last 5
+            self.agent_embeddings[agent_name].pop(0)
+        return False
+    
+    def _basic_similarity_check(self, content, agent_name):
+        """Fallback basic similarity check"""
+        normalized = re.sub(r'\s+', ' ', content.lower().strip())
+        return len(normalized) < 100 or len(set(normalized.split())) < 10
+
+# Global repetition detector
+repetition_detector = EnhancedRepetitionDetector()
 
 # --- ENHANCED TAVILY SEARCH CONFIGURATION ---
 def create_enhanced_search_tools():
     """Create agent-specific TavilySearch tools with optimized configurations"""
-    
     # CEO Tools - Strategic and Market Focus
     ceo_tools = [TavilySearch(
         max_results=5,
@@ -59,8 +112,8 @@ def create_enhanced_search_tools():
         include_domains=["crunchbase.com", "techcrunch.com", "forbes.com", "bloomberg.com"],
         exclude_domains=["reddit.com", "quora.com"]
     )]
-    
-    # CFO Tools - Financial and Funding Focus  
+
+    # CFO Tools - Financial and Funding Focus
     cfo_tools = [TavilySearch(
         max_results=4,
         search_depth="advanced", 
@@ -69,7 +122,7 @@ def create_enhanced_search_tools():
         include_domains=["crunchbase.com", "pitchbook.com", "bloomberg.com", "reuters.com", "sec.gov"],
         exclude_domains=["reddit.com", "quora.com", "wikipedia.org"]
     )]
-    
+
     # CTO Tools - Technical and Development Focus
     cto_tools = [TavilySearch(
         max_results=4,
@@ -79,7 +132,7 @@ def create_enhanced_search_tools():
         include_domains=["github.com", "stackoverflow.com", "medium.com", "dev.to", "techcrunch.com"],
         exclude_domains=["reddit.com", "quora.com"]
     )]
-    
+
     # COO Tools - Operations and Execution Focus
     coo_tools = [TavilySearch(
         max_results=3,
@@ -89,16 +142,22 @@ def create_enhanced_search_tools():
         include_domains=["harvard.edu", "mckinsey.com", "bcg.com", "techcrunch.com", "inc.com"],
         exclude_domains=["reddit.com", "quora.com", "wikipedia.org"]
     )]
-    
+
     return {
         "CEO": ceo_tools,
-        "CFO": cfo_tools, 
+        "CFO": cfo_tools,
         "CTO": cto_tools,
         "COO": coo_tools
     }
 
-# --- LLM and Enhanced Tools Creation ---
-llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
+# --- Enhanced LLM with Repetition Penalties ---
+llm = ChatOpenAI(
+    model="gpt-3.5-turbo", 
+    temperature=0.7,  # Increased from 0 for more variety
+    frequency_penalty=0.3,  # Penalize repeated tokens
+    presence_penalty=0.2,   # Encourage new topics
+)
+
 enhanced_tools = create_enhanced_search_tools()
 
 # Create worker agents with specialized search tools
@@ -111,12 +170,11 @@ coo_agent_executor = create_coo_agent(llm, enhanced_tools["COO"])
 members = ["CEO", "CTO", "CFO", "COO"]
 supervisor_chain = create_supervisor_chain(llm, members)
 
-# --- Helper Functions ---
+# --- Enhanced Helper Functions ---
 def extract_business_idea_from_messages(messages):
     """Extract business idea from initial messages"""
     if not messages:
         return ""
-    
     initial_message = messages[0].content
     patterns = [
         r"Business Idea:\s*(.+?)(?:\n|$)",
@@ -129,23 +187,184 @@ def extract_business_idea_from_messages(messages):
         match = re.search(pattern, initial_message, re.IGNORECASE | re.DOTALL)
         if match:
             return match.group(1).strip()
-    
     return initial_message[:200].strip()
 
 def calculate_conversation_quality(messages, message_count):
-    """Calculate conversation quality degradation"""
+    """Enhanced conversation quality calculation"""
     if message_count <= 5:
         return 1.0
     
     recent_messages = messages[-3:] if len(messages) >= 3 else messages
     recent_content = [msg.content for msg in recent_messages if hasattr(msg, 'content')]
     
-    avg_length = sum(len(content) for content in recent_content) / len(recent_content) if recent_content else 0
-    length_quality = min(avg_length / 500, 1.0)
-    count_penalty = max(0.3, 1.0 - (message_count - 5) * 0.1)
+    if not recent_content:
+        return 0.5
     
-    return length_quality * count_penalty
+    # Check content variety
+    avg_length = sum(len(content) for content in recent_content) / len(recent_content)
+    unique_words = set()
+    for content in recent_content:
+        unique_words.update(content.lower().split())
+    
+    length_quality = min(avg_length / 500, 1.0)
+    variety_quality = min(len(unique_words) / 50, 1.0)
+    count_penalty = max(0.3, 1.0 - (message_count - 5) * 0.08)
+    
+    return (length_quality * 0.4 + variety_quality * 0.4 + count_penalty * 0.2)
 
+def get_participated_agents(state, current_agent):
+    """Get list of agents who have actually participated in the conversation"""
+    agent_participation = state.get("agent_participation", {})
+    participated = []
+    for agent, has_participated in agent_participation.items():
+        if has_participated and agent != current_agent:
+            participated.append(agent)
+    return participated
+
+def generate_smart_personality_prompt(state, agent_name):
+    """Generate personality prompts that only reference agents who have actually spoken"""
+    participated_agents = get_participated_agents(state, agent_name)
+    message_count = state.get("message_count", 0)
+    conversation_quality = state.get("conversation_quality", 1.0)
+    
+    # Base personality starters that don't require other agents
+    base_starters = {
+        "CEO": [
+            "You know what's exciting about this?",
+            "Here's what I'm seeing in the market...",
+            "Let me share my vision for this...",
+            "I'm really excited about the potential here..."
+        ],
+        "CTO": [
+            "From a technical perspective...",
+            "Here's what I'm thinking architecturally...",
+            "Let me break down the technical feasibility...",
+            "Actually, this is interesting technically because..."
+        ],
+        "CFO": [
+            "Let me put this in financial perspective...",
+            "Looking at the numbers...",
+            "From a funding standpoint...",
+            "Here's what the financial model tells us..."
+        ],
+        "COO": [
+            "Operationally speaking...",
+            "Here's how we actually execute this...",
+            "From an implementation standpoint...",
+            "Let me think about the practical steps..."
+        ]
+    }
+    
+    # Reference starters (only if those agents have participated)
+    reference_starters = {
+        "CEO": {
+            "CTO": "Building on Mike's technical insights about",
+            "CFO": "Jennifer's financial analysis really highlights", 
+            "COO": "Tom's operational plan shows us"
+        },
+        "CTO": {
+            "CEO": "Sarah's vision for this makes me think",
+            "CFO": "Jennifer's budget considerations around",
+            "COO": "Tom's implementation timeline for"
+        },
+        "CFO": {
+            "CEO": "Sarah's market opportunity analysis suggests",
+            "CTO": "Mike's technical approach to",
+            "COO": "Tom's operational costs for"
+        },
+        "COO": {
+            "CEO": "Sarah's strategic direction on",
+            "CTO": "Mike's development timeline means",
+            "CFO": "Jennifer's funding timeline suggests"
+        }
+    }
+    
+    # Build conversation starters based on who has participated
+    available_starters = base_starters.get(agent_name, [])
+    
+    if participated_agents:
+        # Add reference starters for agents who have actually spoken
+        agent_references = reference_starters.get(agent_name, {})
+        for participated_agent in participated_agents:
+            if participated_agent in agent_references:
+                starter = f"{agent_references[participated_agent]}..."
+                available_starters.append(starter)
+    
+    # Create the prompt based on conversation quality and participation
+    if conversation_quality < 0.6:
+        return f"""
+        URGENT: The conversation needs more energy. As {agent_name}:
+        - Use these conversation starters: {available_starters}
+        - Challenge assumptions more directly
+        - Ask provocative questions to {"the team" if not participated_agents else ", ".join(participated_agents)}
+        - Share a contrarian viewpoint
+        - Reference specific numbers or examples
+        Make this conversation much more engaging and reactive.
+        """
+    elif message_count == 0:
+        # First speaker - use base starters only
+        return f"""
+        Use one of these conversation starters: {base_starters.get(agent_name, [])}
+        Since this is the beginning of our consultation, focus on your domain expertise and ask other team members specific questions.
+        """
+    elif not participated_agents:
+        # No one else has spoken yet
+        return f"""
+        Use one of these conversation starters: {base_starters.get(agent_name, [])}
+        Other team members haven't contributed yet, so focus on your own analysis and ask them specific questions.
+        """
+    else:
+        # Others have spoken - can reference them
+        return f"""
+        You can use these conversation approaches:
+        - Base starters: {base_starters.get(agent_name, [])}
+        - Reference previous contributions: {[s for s in available_starters if "Building on" in s or "Jennifer's" in s or "Mike's" in s or "Tom's" in s or "Sarah's" in s]}
+        
+        Participated agents you can reference: {participated_agents}
+        Make sure to only reference insights that have actually been shared.
+        """
+
+def generate_context_aware_prompt(state, agent_name):
+    """Generate prompts that force agents to build on actual previous content"""
+    recent_content = []
+    participated_agents = get_participated_agents(state, agent_name)
+    
+    # Only include content from agents who have actually spoken
+    for msg in state.get("messages", [])[-4:]:
+        if hasattr(msg, 'name') and msg.name != agent_name and msg.name in participated_agents:
+            recent_content.append(f"{msg.name}: {msg.content[:150]}...")
+    
+    if recent_content:
+        build_on_context = HumanMessage(
+            content=f"""
+            MANDATORY: Your response must directly build on or react to these ACTUAL contributions:
+            {chr(10).join(recent_content)}
+            
+            Do NOT reference team members who haven't spoken yet.
+            Do NOT repeat similar points. Instead:
+            - Challenge or expand on what was actually said
+            - Ask specific follow-up questions to the contributors
+            - Provide contrasting perspectives to actual points made
+            - Connect insights between the agents who have actually participated
+            """,
+            name="actual_build_context"
+        )
+        return build_on_context
+    else:
+        # No one else has spoken yet
+        no_context = HumanMessage(
+            content=f"""
+            Since other team members haven't contributed yet:
+            - Focus on your domain expertise
+            - Ask specific questions to other team members
+            - Don't reference contributions that don't exist yet
+            - Set up the discussion for others to build on
+            """,
+            name="first_speaker_context"
+        )
+        return no_context
+
+# --- Other helper functions ---
 def create_context_summary(messages, business_idea):
     """Create rolling summary of conversation"""
     if len(messages) <= 5:
@@ -166,29 +385,6 @@ def create_context_summary(messages, business_idea):
             summary_parts.append(f"{agent}: {latest}")
     
     return " | ".join(summary_parts)
-
-def generate_response_hash(content):
-    """Generate hash of response content for deduplication"""
-    normalized = re.sub(r'\s+', ' ', content.lower().strip())
-    buzzwords = ['innovative', 'cutting-edge', 'scalable', 'disruptive', 'game-changing', 'exciting', 'strategic']
-    for word in buzzwords:
-        normalized = normalized.replace(word, '')
-    
-    return hashlib.md5(normalized.encode()).hexdigest()[:10]
-
-def is_response_too_similar(content, previous_hashes, threshold=0.8):
-    """Enhanced similarity detection"""
-    current_hash = generate_response_hash(content)
-    recent_hashes = list(previous_hashes.values())[-5:]
-    
-    for prev_hash in recent_hashes:
-        if current_hash == prev_hash:
-            return True
-    
-    if len(content.lower()) < 100:
-        return True
-        
-    return False
 
 def should_end_conversation(state):
     """Dynamic conversation ending based on quality and completeness"""
@@ -214,7 +410,7 @@ def extract_questions_for_others(content, current_agent):
     questions = []
     agent_patterns = {
         "CEO": ["Sarah", "CEO"],
-        "CTO": ["Mike", "CTO"], 
+        "CTO": ["Mike", "CTO"],
         "CFO": ["Jennifer", "CFO"],
         "COO": ["Tom", "COO"]
     }
@@ -226,6 +422,7 @@ def extract_questions_for_others(content, current_agent):
                 matches = re.findall(pattern, content, re.IGNORECASE)
                 for match in matches:
                     questions.append(f"{agent}: {name}, {match}")
+    
     return questions
 
 def extract_topics_discussed(content):
@@ -243,6 +440,7 @@ def extract_topics_discussed(content):
     for topic, keywords in topic_keywords.items():
         if any(keyword in content_lower for keyword in keywords):
             topics.append(topic)
+    
     return topics
 
 def check_for_final_report(content):
@@ -252,18 +450,19 @@ def check_for_final_report(content):
         "FINAL REPORT:",
         "FINAL REPORT ",
         "EXECUTIVE SUMMARY",
-        "## EXECUTIVE SUMMARY", 
+        "## EXECUTIVE SUMMARY",
         "**FINAL RECOMMENDATION**",
         "FINAL RECOMMENDATION:"
     ]
     
     has_indicator = any(indicator in content_upper for indicator in final_report_indicators)
     is_substantial = len(content) > 500
+    
     return has_indicator and is_substantial
 
-# --- Enhanced Worker Node Function with Full RAG Integration ---
+# --- Enhanced Worker Node Function ---
 def worker_node(state, agent, name):
-    """Enhanced worker node with full RAG implementation and personality preservation"""
+    """Enhanced worker node with semantic similarity, personality reinforcement, and participation awareness"""
     last_speaker = state.get("last_speaker", "")
     message_count = state.get("message_count", 0)
     agent_participation = state.get("agent_participation", {"CEO": False, "CTO": False, "CFO": False, "COO": False})
@@ -305,11 +504,15 @@ def worker_node(state, agent, name):
         )
         additional_messages.append(summary_message)
     
+    # Add context-aware prompt to force building on previous content
+    context_prompt = generate_context_aware_prompt(state, name)
+    if context_prompt:
+        additional_messages.append(context_prompt)
+    
     # FULL RAG IMPLEMENTATION - Natural Integration
     if RAG_AVAILABLE and current_call_count <= 2:
         try:
             business_context = extract_business_idea_from_messages(state.get("messages", []))
-            
             if business_context and len(business_context) > 10:
                 # Generate RAG context
                 rag_result = rag_knowledge_manager.rag_generate_context(
@@ -323,26 +526,17 @@ def worker_node(state, agent, name):
                         name=f"{name.lower()}_background_research"
                     )
                     additional_messages.append(rag_message)
-                    
                     print(f"🔍 RAG enhanced {name} with {len(rag_result['sources'])} knowledge sources")
-                
         except Exception as e:
             print(f"⚠️ RAG error for {name}: {e}")
     
-    # Add personality reinforcement for later calls
-    if current_call_count > 2:
-        personality_reinforcement = {
-            "CEO": "Stay enthusiastic and visionary. Use 'You know what?' and build excitement.",
-            "CFO": "Keep using relatable analogies. Stay practical and numbers-focused.", 
-            "CTO": "Be straightforward and honest about technical realities.",
-            "COO": "Focus on practical execution. Bridge vision to reality."
-        }
-        
-        personality_message = HumanMessage(
-            content=f"Personality reminder: {personality_reinforcement.get(name, 'Stay authentic to your role.')} Avoid being robotic or overly formal.",
-            name="personality_context"
-        )
-        additional_messages.append(personality_message)
+    # Add smart personality reinforcement with participation awareness
+    smart_personality_prompt = generate_smart_personality_prompt(state, name)
+    personality_message = HumanMessage(
+        content=smart_personality_prompt,
+        name="smart_personality_context"
+    )
+    additional_messages.append(personality_message)
     
     # Add final report instruction if needed
     if is_final_report_time:
@@ -361,20 +555,20 @@ def worker_node(state, agent, name):
     
     content = result["output"]
     
-    # Enhanced repetition detection for end-stage
-    if is_response_too_similar(content, response_hashes, threshold=0.7):
-        print(f"⚠️ {name} generated similar response, regenerating...")
-        
+    # Enhanced semantic repetition detection
+    if repetition_detector.is_semantically_similar(content, name, threshold=0.8):
+        print(f"⚠️ {name} generated semantically similar response, regenerating...")
         variety_message = HumanMessage(
-            content=f"Your response was too similar to previous messages. Please provide a fresh, distinct perspective. Focus on a completely different aspect or provide new insights.",
+            content=f"Your response was too similar to previous messages. Please provide a completely fresh perspective focusing on a different aspect. Be more conversational and reactive to what others have said.",
             name="anti_repetition"
         )
+        
         modified_state["messages"] = modified_state["messages"] + [variety_message]
         result = agent.invoke(modified_state)
         content = result["output"]
     
     # Generate hash for current response
-    current_hash = generate_response_hash(content)
+    current_hash = hashlib.md5(content.encode()).hexdigest()[:10]
     response_hashes[f"{name}_{message_count}"] = current_hash
     
     # Extract questions and topics
@@ -386,7 +580,6 @@ def worker_node(state, agent, name):
     # Update participation and counts
     updated_participation = dict(agent_participation)
     updated_participation[name] = True
-    
     updated_call_counts = dict(agent_call_counts)
     updated_call_counts[name] = current_call_count
     
@@ -425,13 +618,13 @@ def worker_node(state, agent, name):
 
 # Define nodes for each worker agent
 ceo_node = functools.partial(worker_node, agent=ceo_agent_executor, name="CEO")
-cto_node = functools.partial(worker_node, agent=cto_agent_executor, name="CTO") 
+cto_node = functools.partial(worker_node, agent=cto_agent_executor, name="CTO")
 cfo_node = functools.partial(worker_node, agent=cfo_agent_executor, name="CFO")
 coo_node = functools.partial(worker_node, agent=coo_agent_executor, name="COO")
 
 # --- Enhanced Supervisor Node ---
 def supervisor_node(state):
-    """Enhanced supervisor with quality-aware routing"""
+    """Enhanced supervisor with quality-aware routing and anti-repetition logic"""
     messages = state.get("messages", [])
     message_count = state.get("message_count", 0)
     last_speaker = state.get("last_speaker", "")
@@ -455,6 +648,17 @@ def supervisor_node(state):
     if should_end_conversation(state):
         return {"next": "CEO"}
     
+    # Detect conversation stagnation and force perspective shift
+    if message_count > 5:
+        recent_messages = [msg.content for msg in messages[-3:] if hasattr(msg, 'content')]
+        if len(set(recent_messages)) < 2:  # Too similar
+            # Force perspective shift
+            available_agents = ["CEO", "CTO", "CFO", "COO"]
+            least_active = min(available_agents, key=lambda x: agent_call_counts.get(x, 0))
+            if least_active != last_speaker:
+                print(f"🔄 Forcing perspective shift to {least_active}")
+                return {"next": least_active}
+    
     # RULE 1: Ensure each agent participates at least once
     for agent in ["CEO", "CTO", "CFO", "COO"]:
         if not agent_participation[agent] and agent != last_speaker:
@@ -476,7 +680,7 @@ def supervisor_node(state):
         if target_agent and target_agent != last_speaker:
             return {"next": target_agent}
     
-    # RULE 3: Topic-based routing
+    # RULE 3: Topic-based routing with expertise matching
     if topics_discussed and message_count < 8:
         latest_topics = topics_discussed[-2:] if len(topics_discussed) >= 2 else topics_discussed
         
@@ -501,6 +705,7 @@ def supervisor_node(state):
 
 # --- Graph Definition ---
 workflow = StateGraph(AgentState)
+
 workflow.add_node("CEO", ceo_node)
 workflow.add_node("CTO", cto_node)
 workflow.add_node("CFO", cfo_node)
@@ -514,6 +719,7 @@ for member in members:
 # Conditional routing
 conditional_map = {k: k for k in members}
 conditional_map["FINISH"] = END
+
 workflow.add_conditional_edges("supervisor", lambda x: x["next"], conditional_map)
 workflow.set_entry_point("supervisor")
 
@@ -535,15 +741,20 @@ def main():
         "response_hashes": {},
         "agent_call_counts": {"CEO": 0, "CTO": 0, "CFO": 0, "COO": 0},
         "conversation_quality": 1.0,
-        "context_summary": ""
+        "context_summary": "",
+        "agent_embeddings": {}
     }
     
-    print("\n--- Starting RAG-Enhanced AI Startup Consultation ---")
+    print("\n--- Starting Enhanced Conversational AI Startup Consultation ---")
     if RAG_AVAILABLE:
         print("🔍 Full RAG system active: Agents have access to knowledge bases and real-time market data")
     else:
         print("🔍 Agents have access to real-time market data via TavilySearch")
-    print("🎯 Dynamic quality management and anti-repetition system active\n")
+    
+    if SEMANTIC_AVAILABLE:
+        print("🧠 Semantic similarity detection active")
+    
+    print("🎯 Enhanced conversation flow, anti-repetition, participation-aware system active\n")
     
     # Add recursion limit to prevent infinite loops
     config = {"recursion_limit": 30}
@@ -562,12 +773,12 @@ def main():
                 print(agent_message)
                 print()
     
-    print("--- RAG-Enhanced Consultation Finished ---")
+    print("--- Enhanced Conversational Consultation Finished ---")
     if RAG_AVAILABLE:
         print("💡 Your consultation included RAG-powered knowledge insights and real-time market research!")
     else:
         print("💡 Your consultation included real-time market research!")
-    print("🎯 Conversation optimized for quality and personality preservation!")
+    print("🎯 Conversation optimized for natural flow, quality and participation awareness!")
 
 if __name__ == "__main__":
     main()

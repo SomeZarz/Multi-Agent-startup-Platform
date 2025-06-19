@@ -5,14 +5,20 @@ from dotenv import load_dotenv
 from langchain_community.vectorstores import FAISS
 from langchain_openai import OpenAIEmbeddings
 from langchain.schema import Document
+from pathlib import Path
 
 # Load environment variables
 load_dotenv()
 
 class RAGKnowledgeManager:
-    def __init__(self, config_path="knowledge_system/config/kb_config.yaml"):
+    def __init__(self, config_path=None):
         if not os.getenv("OPENAI_API_KEY"):
-            raise ValueError("OpenAI API key not found. Please set OPENAI_API_KEY in your environment.")
+            raise ValueError("OpenAI API key not found.")
+        
+        # Make config path relative to this script
+        if config_path is None:
+            script_dir = Path(__file__).parent
+            config_path = script_dir / "config" / "kb_config.yaml"
         
         try:
             with open(config_path, 'r') as f:
@@ -42,24 +48,26 @@ class RAGKnowledgeManager:
         }
     
     def _load_all_knowledge_bases(self) -> Dict[str, FAISS]:
-        """Load all knowledge bases with RAG support and proper security settings"""
+        """Load knowledge bases with portable paths"""
         knowledge_bases = {}
         
+        # Use paths relative to script directory
+        script_dir = Path(__file__).parent
+        
         kb_paths = {
-            "CEO": "knowledge_system/vector_stores/ceo_market_db",
-            "CFO": "knowledge_system/vector_stores/cfo_funding_db",
-            "CTO": "knowledge_system/vector_stores/cto_tech_db",
-            "COO": "knowledge_system/vector_stores/coo_operations_db"
+            "CEO": script_dir / "vector_stores" / "ceo_market_db",
+            "CFO": script_dir / "vector_stores" / "cfo_funding_db", 
+            "CTO": script_dir / "vector_stores" / "cto_tech_db",
+            "COO": script_dir / "vector_stores" / "coo_operations_db"
         }
         
         for agent, path in kb_paths.items():
             try:
-                if os.path.exists(path):
-                    # FIX: Add allow_dangerous_deserialization=True for your own files
+                if path.exists():
                     knowledge_bases[agent] = FAISS.load_local(
-                        path, 
+                        str(path),  # Convert Path to string
                         self.embeddings,
-                        allow_dangerous_deserialization=True  # Safe since we created these files
+                        allow_dangerous_deserialization=True
                     )
                     print(f"✅ RAG-enabled {agent} knowledge base loaded")
                 else:
@@ -69,7 +77,6 @@ class RAGKnowledgeManager:
                     print(f"⚠️ Created empty {agent} knowledge base")
             except Exception as e:
                 print(f"❌ Error loading {agent} knowledge base: {e}")
-                # Create fallback knowledge base
                 dummy_doc = Document(page_content="Knowledge base error", metadata={"source": "error"})
                 knowledge_bases[agent] = FAISS.from_documents([dummy_doc], self.embeddings)
         

@@ -7,16 +7,16 @@ agents:
   CEO:
     domains: ["market_analysis", "strategy"]
     max_retrieval_results: 5
-    relevance_threshold: 0.7
+    relevance_threshold: 0.9
   CFO:
     domains: ["financial_metrics", "funding"]
     max_retrieval_results: 4
-    relevance_threshold: 0.75
+    relevance_threshold: 0.9
   CTO:
     domains: ["technology", "development"]
     max_retrieval_results: 4
-    relevance_threshold: 0.7
+    relevance_threshold: 0.9
   COO:
     domains: ["operations", "strategy"]
     max_retrieval_results: 3
-    relevance_threshold: 0.7
+    relevance_threshold: 0.9
