@@ -4,3 +4,5 @@ langchain_openai
 langchain_community
 tavily-python
 python-dotenv
+langchain_tavily
+streamlit
