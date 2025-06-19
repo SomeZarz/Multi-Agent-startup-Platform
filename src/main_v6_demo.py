@@ -152,7 +152,7 @@ def create_enhanced_search_tools():
 
 # --- Enhanced LLM with Repetition Penalties ---
 llm = ChatOpenAI(
-    model="gpt-4.1", 
+    model="gpt-4o-mini", 
     temperature=0.7,  # Increased from 0 for more variety
     frequency_penalty=0.3,  # Penalize repeated tokens
     presence_penalty=0.2,   # Encourage new topics
