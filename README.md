@@ -7,5 +7,9 @@ pip install -r requirements.txt
 OPENAI_API_KEY="sk-proj...."
 TAVILY_API_KEY="tvly-dev...."
 
+# FROM V3+
+ls .streamlit
+find secrets.toml
+
 ## TO START STREAMLIT
 streamlit run streamlit_app.py
