@@ -1,0 +1,22 @@
+embedding_model: "text-embedding-3-small"
+chunk_size: 1000
+chunk_overlap: 200
+vector_store_type: "FAISS"
+
+agents:
+  CEO:
+    domains: ["market_analysis", "strategy"]
+    max_retrieval_results: 5
+    relevance_threshold: 0.7
+  CFO:
+    domains: ["financial_metrics", "funding"]
+    max_retrieval_results: 4
+    relevance_threshold: 0.75
+  CTO:
+    domains: ["technology", "development"]
+    max_retrieval_results: 4
+    relevance_threshold: 0.7
+  COO:
+    domains: ["operations", "strategy"]
+    max_retrieval_results: 3
+    relevance_threshold: 0.7

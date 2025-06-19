@@ -3,7 +3,7 @@ import base64
 import re
 from fpdf import FPDF
 from fpdf.enums import XPos, YPos
-from main_v4 import app
+from main_v6 import app, RAG_AVAILABLE
 from langchain_core.messages import HumanMessage
 
 # Define emoji icons for each role
@@ -11,7 +11,7 @@ AVATAR_ICONS = {
     "user": "👤",
     "assistant": "🤖",
     "ceo": "💼",
-    "cto": "💻", 
+    "cto": "💻",
     "cfo": "💰",
     "coo": "⚙️",
     "final_report": "📋"
@@ -19,39 +19,27 @@ AVATAR_ICONS = {
 
 def clean_text_for_pdf(text):
     """Clean text to remove Unicode characters that can't be encoded in latin-1"""
-    # Replace common Unicode characters with latin-1 equivalents
     replacements = {
-        '\u2022': '•',  # Bullet point -> ASCII bullet
-        '\u2013': '-',  # En dash -> hyphen
-        '\u2014': '--', # Em dash -> double hyphen
-        '\u2018': "'",  # Left single quote -> apostrophe
-        '\u2019': "'",  # Right single quote -> apostrophe
-        '\u201c': '"',  # Left double quote -> quote
-        '\u201d': '"',  # Right double quote -> quote
-        '\u2026': '...',# Ellipsis -> three dots
-        '\u00a0': ' ',  # Non-breaking space -> regular space
+        '\u2022': '•', '\u2013': '-', '\u2014': '--', '\u2018': "'", '\u2019': "'",
+        '\u201c': '"', '\u201d': '"', '\u2026': '...', '\u00a0': ' '
     }
-    
     for unicode_char, replacement in replacements.items():
         text = text.replace(unicode_char, replacement)
     
-    # Replace markdown bullet points with ASCII
     text = re.sub(r'^-\s+', '• ', text, flags=re.MULTILINE)
     text = re.sub(r'^\*\s+', '• ', text, flags=re.MULTILINE)
     
-    # Remove or replace any remaining non-latin-1 characters
     try:
         text.encode('latin-1')
         return text
     except UnicodeEncodeError:
-        # If encoding still fails, replace problematic characters
         cleaned_text = ""
         for char in text:
             try:
                 char.encode('latin-1')
                 cleaned_text += char
             except UnicodeEncodeError:
-                cleaned_text += '?'  # Replace with question mark
+                cleaned_text += '?'
         return cleaned_text
 
 def create_pdf_download_link(content, filename):
@@ -59,24 +47,19 @@ def create_pdf_download_link(content, filename):
     try:
         pdf = FPDF()
         pdf.add_page()
-        
-        # Use updated fpdf2 syntax
         pdf.set_font('Helvetica', 'B', 16)
         
-        # Add title with updated syntax
-        pdf.cell(0, 10, 'STARTUP CONSULTATION REPORT', new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C')
+        # Add title with RAG indicator
+        title = 'RAG-ENHANCED STARTUP CONSULTATION REPORT' if RAG_AVAILABLE else 'STARTUP CONSULTATION REPORT'
+        pdf.cell(0, 10, title, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C')
         pdf.ln(10)
         
-        # Clean content for PDF compatibility
         clean_content = clean_text_for_pdf(content)
-        
-        # Process content
         pdf.set_font('Helvetica', '', 11)
         lines = clean_content.split('\n')
         
         for line in lines:
             if line.strip():
-                # Handle markdown headers
                 if line.startswith('##'):
                     pdf.set_font('Helvetica', 'B', 14)
                     clean_line = line.replace('##', '').strip()
@@ -89,7 +72,6 @@ def create_pdf_download_link(content, filename):
                     pdf.cell(0, 6, clean_line, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
                     pdf.set_font('Helvetica', '', 11)
                 elif line.startswith('• '):
-                    # Handle bullet points with proper encoding
                     bullet_line = line
                     if len(bullet_line) > 85:
                         words = bullet_line.split(' ')
@@ -106,7 +88,6 @@ def create_pdf_download_link(content, filename):
                     else:
                         pdf.cell(0, 5, bullet_line, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
                 else:
-                    # Handle regular text with wrapping
                     if len(line) > 90:
                         words = line.split(' ')
                         current_line = ""
@@ -124,15 +105,14 @@ def create_pdf_download_link(content, filename):
             else:
                 pdf.ln(3)
         
-        # Create download link
         pdf_output = pdf.output(dest="S")
         if isinstance(pdf_output, str):
             pdf_bytes = pdf_output.encode('latin-1')
         else:
             pdf_bytes = pdf_output
-            
+        
         b64 = base64.b64encode(pdf_bytes).decode()
-        return f'<a href="data:application/pdf;base64,{b64}" download="{filename}.pdf">📄 Download PDF Report</a>'
+        return f'<a href="data:application/pdf;base64,{b64}" download="{filename}">📄 Download PDF Report</a>'
         
     except Exception as e:
         st.error(f"PDF generation failed: {str(e)}")
@@ -142,41 +122,60 @@ def extract_final_report(messages):
     """Enhanced final report detection"""
     for message in reversed(messages):
         content = message.get("content", "")
-        # Look for multiple indicators of final report
         if any(indicator in content for indicator in [
-            "FINAL REPORT:", 
-            "FINAL REPORT ", 
-            "Final Report:",
-            "Executive Summary"
-        ]) and len(content) > 200:  # Ensure it's substantial
+            "FINAL REPORT:", "FINAL REPORT ", "Final Report:", "Executive Summary"
+        ]) and len(content) > 200:
             return content
     
-    # Fallback: Look for CEO's longest message if conversation is substantial
     if len(messages) >= 8:
         ceo_messages = [msg for msg in messages if msg.get("role") == "ceo"]
         if ceo_messages:
             longest_ceo_message = max(ceo_messages, key=lambda x: len(x.get("content", "")))
             if len(longest_ceo_message.get("content", "")) > 500:
                 return longest_ceo_message["content"]
-    
     return None
 
-
 # Set page config
-st.set_page_config(page_title="AI Startup Consultancy", layout="wide")
-st.title("🚀 AI Startup Consultancy Firm")
+st.set_page_config(page_title="RAG-Enhanced AI Startup Consultancy", layout="wide")
+
+# Dynamic title based on RAG availability
+if RAG_AVAILABLE:
+    st.title("🚀 RAG-Enhanced AI Startup Consultancy Firm")
+    st.markdown("*Powered by Knowledge Bases + Real-time Search*")
+else:
+    st.title("🚀 AI Startup Consultancy Firm")
+    st.markdown("*Powered by Real-time Search*")
 
 # Sidebar
 with st.sidebar:
     st.header("About This App")
-    st.write("Our AI board (CEO, CTO, CFO, COO) will analyze your business idea and provide comprehensive consultation.")
+    if RAG_AVAILABLE:
+        st.write("Our AI board (CEO, CTO, CFO, COO) will analyze your business idea using RAG-enhanced knowledge bases and real-time market data.")
+    else:
+        st.write("Our AI board (CEO, CTO, CFO, COO) will analyze your business idea using real-time market data.")
     
     st.markdown("---")
     st.subheader("How It Works")
     st.write("1. **Submit Idea:** Enter your business concept")
-    st.write("2. **Board Discussion:** Watch AI agents collaborate")  
-    st.write("3. **Final Report:** Get a comprehensive business analysis")
-    st.write("4. **Export:** Download your report as PDF or Markdown")
+    st.write("2. **Board Discussion:** Watch AI agents collaborate")
+    if RAG_AVAILABLE:
+        st.write("3. **RAG Enhancement:** Agents access knowledge bases")
+        st.write("4. **Final Report:** Get comprehensive analysis")
+        st.write("5. **Export:** Download as PDF or Markdown")
+    else:
+        st.write("3. **Final Report:** Get comprehensive analysis")
+        st.write("4. **Export:** Download as PDF or Markdown")
+    
+    st.markdown("---")
+    
+    # System status
+    st.subheader("System Status")
+    if RAG_AVAILABLE:
+        st.success("🔍 RAG System: Active")
+        st.info("📚 Knowledge Bases: Loaded")
+    else:
+        st.warning("🔍 RAG System: Not Available")
+        st.info("🌐 TavilySearch: Active")
     
     st.markdown("---")
     st.caption("Powered by LangGraph • OpenAI • Streamlit")
@@ -184,9 +183,23 @@ with st.sidebar:
 # Initialize chat history
 if "messages" not in st.session_state:
     st.session_state.messages = []
+    welcome_message = """👋 Welcome to your AI Startup Consultancy! I'm here to facilitate a board meeting with our expert AI agents.
+
+**Ready to analyze your business idea?** Our team includes:
+- 💼 **Sarah (CEO)**: Strategic vision and market analysis
+- 💻 **Mike (CTO)**: Technical feasibility and architecture  
+- 💰 **Jennifer (CFO)**: Financial modeling and funding strategy
+- ⚙️ **Tom (COO)**: Operations and execution planning
+"""
+    
+    if RAG_AVAILABLE:
+        welcome_message += "\n🔍 **Enhanced with RAG**: Agents now have access to specialized knowledge bases for more accurate insights!"
+    
+    welcome_message += "\nPlease share your business idea below to begin the consultation!"
+    
     st.session_state.messages.append({
         "role": "assistant", 
-        "content": "👋 Welcome to your AI Startup Consultancy! I'm here to facilitate a board meeting with our expert AI agents.\n\n**Ready to analyze your business idea?** Our team includes:\n- 💼 **Sarah (CEO)**: Strategic vision and market analysis\n- 💻 **Mike (CTO)**: Technical feasibility and architecture\n- 💰 **Jennifer (CFO)**: Financial modeling and funding strategy\n- ⚙️ **Tom (COO)**: Operations and execution planning\n\nPlease share your business idea below to begin the consultation!"
+        "content": welcome_message
     })
 
 # Display chat messages
@@ -194,7 +207,6 @@ for message in st.session_state.messages:
     role = message["role"]
     content = message["content"]
     
-    # Determine display name and avatar
     if role == "user":
         display_name = "You"
         avatar = AVATAR_ICONS["user"]
@@ -214,7 +226,6 @@ for message in st.session_state.messages:
 
 # Handle user input
 if prompt := st.chat_input("Describe your business idea..."):
-    # Validate input
     if len(prompt.strip()) < 10:
         st.warning("Please provide a more detailed business idea (at least 10 characters)")
         st.stop()
@@ -227,12 +238,28 @@ if prompt := st.chat_input("Describe your business idea..."):
     # Prepare initial message
     initial_messages = [HumanMessage(content=f"Analyze this business idea and provide comprehensive consultation: {prompt}")]
     
+    # Prepare initial state for RAG-enhanced system
+    initial_state = {
+        "messages": initial_messages,
+        "discussion_phase": "initial",
+        "topics_discussed": [],
+        "pending_questions": [],
+        "message_count": 0,
+        "last_speaker": "",
+        "agent_participation": {"CEO": False, "CTO": False, "CFO": False, "COO": False},
+        "response_hashes": {},
+        "agent_call_counts": {"CEO": 0, "CTO": 0, "CFO": 0, "COO": 0},
+        "conversation_quality": 1.0,
+        "context_summary": ""
+    }
+    
     # Process with spinner
-    with st.spinner("🤝 The AI board is in session, analyzing your idea..."):
+    spinner_text = "🤝 The RAG-enhanced AI board is in session..." if RAG_AVAILABLE else "🤝 The AI board is in session..."
+    with st.spinner(spinner_text):
         try:
-            # Stream from LangGraph with increased recursion limit
-            config = {"recursion_limit": 50}  # Add this line
-            for output in app.stream({"messages": initial_messages}, config=config):  # Add config parameter
+            config = {"recursion_limit": 30}
+            
+            for output in app.stream(initial_state, config=config):
                 for key, value in output.items():
                     if key != "__end__" and "messages" in value and value["messages"]:
                         agent_role = key.lower()
@@ -243,8 +270,12 @@ if prompt := st.chat_input("Describe your business idea..."):
                         display_name = names.get(agent_role, key.upper())
                         avatar = AVATAR_ICONS.get(agent_role, "💬")
                         
+                        # Show quality indicator if available
+                        quality = value.get('conversation_quality', 1.0)
+                        quality_indicator = "🟢" if quality > 0.7 else "🟡" if quality > 0.4 else "🔴"
+                        
                         # Display message
-                        with st.chat_message(display_name, avatar=avatar):
+                        with st.chat_message(f"{display_name} {quality_indicator}", avatar=avatar):
                             st.markdown(agent_message)
                         
                         # Add to session state
@@ -257,21 +288,25 @@ if prompt := st.chat_input("Describe your business idea..."):
             st.error(f"An error occurred during the consultation: {str(e)}")
             st.info("Please try again or rephrase your business idea.")
 
-
 # Export functionality
 if len(st.session_state.messages) > 2:
     final_report = extract_final_report(st.session_state.messages)
-    
     if final_report:
         st.markdown("---")
-        st.subheader("📄 Export Your Consultation Report")
+        
+        # Dynamic export title
+        if RAG_AVAILABLE:
+            st.subheader("📄 Export Your RAG-Enhanced Consultation Report")
+        else:
+            st.subheader("📄 Export Your Consultation Report")
         
         col1, col2, col3 = st.columns(3)
         
         with col1:
             if st.button("📄 Download PDF", use_container_width=True):
                 with st.spinner("Generating PDF..."):
-                    pdf_link = create_pdf_download_link(final_report, "startup_consultation_report")
+                    filename = "rag_enhanced_startup_report.pdf" if RAG_AVAILABLE else "startup_consultation_report.pdf"
+                    pdf_link = create_pdf_download_link(final_report, filename)
                     if pdf_link:
                         st.markdown(pdf_link, unsafe_allow_html=True)
                         st.success("PDF download link generated!")
@@ -279,12 +314,12 @@ if len(st.session_state.messages) > 2:
                         st.error("Failed to generate PDF. Try downloading as Markdown instead.")
         
         with col2:
-            # Clean content for markdown download as well
             clean_markdown = clean_text_for_pdf(final_report)
+            filename = "rag_enhanced_startup_report.md" if RAG_AVAILABLE else "startup_consultation_report.md"
             st.download_button(
                 label="📝 Download Markdown",
                 data=clean_markdown,
-                file_name="startup_consultation_report.md",
+                file_name=filename,
                 mime="text/markdown",
                 use_container_width=True
             )
@@ -293,23 +328,24 @@ if len(st.session_state.messages) > 2:
             if st.button("🔄 New Consultation", use_container_width=True):
                 st.session_state.messages = []
                 st.rerun()
-    
+                
     elif len(st.session_state.messages) > 15:
         st.markdown("---")
-        st.info("💡 The consultation is in progress. The export options will appear once the final report is ready.")
-        
+        st.info("💡 The consultation is in progress. Export options will appear once the final report is ready.")
         if st.button("🔄 Start New Consultation"):
             st.session_state.messages = []
             st.rerun()
 
 # Footer
 st.markdown("---")
-st.markdown(
-    """
-    <div style='text-align: center; color: #666; font-size: 12px;'>
-    🤖 Powered by Multi-Agent AI • Built with LangGraph & Streamlit<br>
-    For demonstration purposes • Results may not reflect real market conditions
-    </div>
-    """, 
-    unsafe_allow_html=True
-)
+if RAG_AVAILABLE:
+    st.markdown(
+        '<div style="text-align: center; color: #888;">🔍 RAG-Enhanced AI Startup Consultancy • Knowledge-Powered Business Intelligence</div>',
+        unsafe_allow_html=True
+    )
+else:
+    st.markdown(
+        '<div style="text-align: center; color: #888;">🔍 AI Startup Consultancy • Real-time Market Intelligence</div>',
+        unsafe_allow_html=True
+    )
+

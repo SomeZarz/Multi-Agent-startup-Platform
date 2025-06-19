@@ -1,11 +1,16 @@
 
 #cache files
 **/__pycache__/
-**/.streamlit
-*.pyc
 
-#keys 
-.ENV
+# Environment files
+.env
+.env.*
+.env*.local
 
-#virtual env
-startupAgent/
+# Secrets files
+secrets.toml
+.streamlit/secrets.toml
+
+# All toml files in .streamlit directory
+.streamlit/*.toml
+
