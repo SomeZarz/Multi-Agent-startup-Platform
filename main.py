@@ -1,135 +1,104 @@
+# main.py
+
 import os
 from dotenv import load_dotenv
 from typing import Annotated, List, TypedDict
+import functools
+import json
+
 from langchain_core.messages import BaseMessage, HumanMessage
 from langgraph.graph import StateGraph, END
 from langchain_openai import ChatOpenAI
-from langchain_community.tools.tavily_search import TavilySearchResults
+from langchain_tavily import TavilySearch
 
-# Import agent 
+# Import agent creation functions
 from agents.ceo import create_ceo_agent
 from agents.cfo import create_cfo_agent
 from agents.cto import create_cto_agent
 from agents.coo import create_coo_agent
+from agents.supervisor import create_supervisor_chain
 
-# Loadvariables from .env file
+# Load variables from .env file
 load_dotenv()
 
+# --- Agent State Definition ---
 class AgentState(TypedDict):
-    messages: Annotated[List[BaseMessage], lambda x, y: x + y] #shared state for all agents
+    messages: Annotated[List[BaseMessage], lambda x, y: x + y]
+    next: str
 
+def get_graph_app():
+    """
+    Creates and compiles the multi-agent LangGraph application.
+    This function is now importable by other scripts, like our Streamlit app.
+    """
+    # --- Agent and Tool Creation ---
+    tools = [TavilySearch(max_results=3)]
+    llm = ChatOpenAI(model="gpt-4o", temperature=0)
 
-tools = [TavilySearchResults(max_results=3)] #tavily search tool
+    # Create the worker agents and the supervisor
+    ceo_agent_executor = create_ceo_agent(llm, tools)
+    cfo_agent_executor = create_cfo_agent(llm, tools)
+    cto_agent_executor = create_cto_agent(llm, tools)
+    coo_agent_executor = create_coo_agent(llm, tools)
 
+    members = ["CEO", "CTO", "CFO", "COO"]
+    supervisor_chain = create_supervisor_chain(llm, members)
 
-llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0) #gpt-3.5-turbo model with low temperature for all models
+    # --- Node and Graph Definition ---
+    def worker_node(state, agent, name):
+        result = agent.invoke(state)
+        return {"messages": [HumanMessage(content=result["output"], name=name)]}
 
-# Agent Creation
-ceo_agent_executor = create_ceo_agent(llm, tools)
-cfo_agent_executor = create_cfo_agent(llm, tools)
-cto_agent_executor = create_cto_agent(llm, tools)
-coo_agent_executor = create_coo_agent(llm, tools)
+    ceo_node = functools.partial(worker_node, agent=ceo_agent_executor, name="CEO")
+    cto_node = functools.partial(worker_node, agent=cto_agent_executor, name="CTO")
+    cfo_node = functools.partial(worker_node, agent=cfo_agent_executor, name="CFO")
+    coo_node = functools.partial(worker_node, agent=coo_agent_executor, name="COO")
 
-# Node Functions
-# turn by turn response node for each agent
-def ceo_node(state):
-    response = ceo_agent_executor.invoke(state)
-    return {"messages": [HumanMessage(content=response["output"], name="CEO")]}
+    def supervisor_node(state):
+        result = supervisor_chain.invoke(state)
+        if result.tool_calls:
+            call = result.tool_calls[0]
+            if call['name'] == "route":
+                arguments = call['args']
+                next_agent = arguments["next"]
+                return {"next": next_agent}
+        return {"next": "FINISH"}
 
-def cto_node(state):
-    response = cto_agent_executor.invoke(state)
-    return {"messages": [HumanMessage(content=response["output"], name="CTO")]}
-
-def cfo_node(state):
-    response = cfo_agent_executor.invoke(state)
-    return {"messages": [HumanMessage(content=response["output"], name="CFO")]}
-
-def coo_node(state):
-    response = coo_agent_executor.invoke(state)
-    return {"messages": [HumanMessage(content=response["output"], name="COO")]}
-
-
-def router(state):
-    last_message = state["messages"][-1] #determines the best agent to act based on conversation history
-    
-    # If the CEO has generated the final report, end the conversation.
-    if "FINAL REPORT:" in last_message.content:
-        return END
-    
-    # Route to the appropriate agent based on who had the last convo
-    if last_message.name == "CEO":
-        return "CTO"
-    elif last_message.name == "CTO":
-        return "CFO"
-    elif last_message.name == "CFO":
-        return "COO"
-    elif last_message.name == "COO":
-        
-        return "CEO" #ceo critisises after agents are done.
-    else:
-        
-        return END #or not?
-
-# --- Graph Definition and Execution ---
-def main():
-    # Define the graph structure
     workflow = StateGraph(AgentState)
-
-    # Add nodes for each agent
     workflow.add_node("CEO", ceo_node)
     workflow.add_node("CTO", cto_node)
     workflow.add_node("CFO", cfo_node)
     workflow.add_node("COO", coo_node)
+    workflow.add_node("supervisor", supervisor_node)
 
-    
-    workflow.set_entry_point("CEO") # the graph entry point
+    for member in members:
+        workflow.add_edge(member, "supervisor")
 
-    # Add conditional edges to route the conversation
-    workflow.add_conditional_edges(
-        "CEO",
-        router,
-        {"CTO": "CTO", "CEO": "CEO"} # The CEO can talk to the CTO or continue talking to itself (for critique phase)
-    )
-    workflow.add_conditional_edges(
-        "CTO",
-        router,
-        {"CFO": "CFO"}
-    )
-    workflow.add_conditional_edges(
-        "CFO",
-        router,
-        {"COO": "COO"}
-    )
-    workflow.add_conditional_edges(
-        "COO",
-        router,
-        {"CEO": "CEO"}
-    )
+    conditional_map = {k: k for k in members}
+    conditional_map["FINISH"] = END
+    workflow.add_conditional_edges("supervisor", lambda x: x["next"], conditional_map)
 
+    workflow.set_entry_point("supervisor")
     
-    app = workflow.compile() #executable app on terminal
+    return workflow.compile()
 
-    
-    idea = input("Please enter your business idea: ") #user inputs idea
-    
-    
-    initial_messages = [HumanMessage(content=f"Here is the business idea: {idea}")] #prepare the message for langgraph
+# This part allows you to still run main.py directly for testing if needed
+if __name__ == "__main__":
+    app = get_graph_app()
+    idea = input("Please enter your business idea: ")
+    initial_messages = [HumanMessage(content=f"Here is the business idea: {idea}")]
     
     print("\n--- Starting Startup Consultation ---\n")
     
-    
-    for output in app.stream({"messages": initial_messages}): #show live convo using stream
-        
-        # The key of the output dictionary is the name of the node that just ran
+    for output in app.stream({"messages": initial_messages}):
         for key, value in output.items():
             if key != "__end__":
-                agent_name = key
-                agent_message = value['messages'][-1].content
-                print(f"--- {agent_name} ---")
-                print(agent_message)
+                print(f"--- Node: {key} ---")
+                if 'messages' in value:
+                    print(value['messages'][-1].content)
+                else:
+                    print(f"Routing to: {value.get('next')}")
                 print("\n")
 
     print("--- Consultation Finished ---")
 
-if __name__ == "__main__":
-    main()
