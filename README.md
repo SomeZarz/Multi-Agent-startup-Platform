@@ -13,3 +13,7 @@ find secrets.toml
 
 ## TO START STREAMLIT
 streamlit run streamlit_app.py
+
+python knowledge_system/scripts/data_ingestion.py
+
+python knowledge_system/scripts/setup_knowledge_bases.py
