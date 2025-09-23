@@ -13,4 +13,6 @@ secrets.toml
 
 # All toml files in .streamlit directory
 .streamlit/*.toml
+# ignoring this folder
 
+startupAgent/
