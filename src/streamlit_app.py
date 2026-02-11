@@ -432,6 +432,7 @@ for message in st.session_state.messages:
         avatar = "💬"
     
     with st.chat_message(name=display_name, avatar=avatar):
+        st.markdown(f"**{display_name}**")
         st.markdown(content)
 
 # Handle user input
@@ -443,6 +444,7 @@ if prompt := st.chat_input("Describe your business idea..."):
     # Add user message
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("You", avatar=AVATAR_ICONS["user"]):
+        st.markdown("**You**")
         st.markdown(prompt)
     
     # Prepare initial message
@@ -486,6 +488,7 @@ if prompt := st.chat_input("Describe your business idea..."):
                         
                         # Display message
                         with st.chat_message(f"{display_name} {quality_indicator}", avatar=avatar):
+                            st.markdown(f"**{display_name}** {quality_indicator}")
                             st.markdown(agent_message)
                         
                         # Add to session state
